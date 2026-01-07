@@ -9,7 +9,7 @@
 
 import { createHashRouter, Navigate } from "react-router-dom";
 import App from "../App";
-import Home from "../pages/Home";
+import Home from "../pages/BissolHome";
 import BoardList from "../pages/Board/BoardList";
 import BoardDetail from "../pages/Board/BoardDetail";
 import BoardForm from "../pages/Board/BoardForm";
