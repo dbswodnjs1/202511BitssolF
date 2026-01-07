@@ -20,6 +20,8 @@ import SoundPlayer from "../pages/sound/SoundPlayer";
 import Login from "../pages/user/Login";
 import Signup from "../pages/user/Signup";
 import ProtectedRoute from "../components/ProtectedRoute";
+import MyPage from "../pages/option/MyPage";
+import Settings from "../pages/option/Settings";
 
 // 페이지 routing 정보를 배열에 미리 저장해둔다.
 const routes = [
@@ -27,6 +29,10 @@ const routes = [
     // 공개 페이지 (로그인 필요 없음)
     { path: "/login", element: <Login />, isPublic: true },
     { path: "/signup", element: <Signup />, isPublic: true },
+
+    //  마이페이지(로그인 필요)
+    { path: "/mypage", element: <MyPage /> },
+    { path: "/option/settings", element: <Settings /> },
 
     // 보호된 페이지 (로그인 필요)
     // spring boot 서버에 넣어서 실행하면 최초 로딩될때  /index.html 경로로 로딩된다.

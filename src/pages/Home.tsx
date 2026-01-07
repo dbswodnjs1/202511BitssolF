@@ -24,8 +24,9 @@ function Home() {
       <main className="home-screen__content">
         <BottomPanel>
           <WeatherCardStrip items={weatherCardItems} />
-          <BottomNav />
+          
         </BottomPanel>
+        <BottomNav />
       </main>
 
     </div>

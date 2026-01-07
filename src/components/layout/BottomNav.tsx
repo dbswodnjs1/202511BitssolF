@@ -8,7 +8,7 @@ const navItems: { key: NavKey; label: string; icon: JSX.Element; path: string }[
   { key: 'home', label: '홈', icon: HomeIcon(), path: '/' },
   { key: 'music', label: '음악', icon: HeadphonesIcon(), path: '/sound' },
   { key: 'group', label: '그룹', icon: UsersIcon(), path: '/board' },  // TODO: 나중에 경로 수정
-  { key: 'profile', label: '프로필', icon: UserIcon(), path: '/login' },
+  { key: 'profile', label: '프로필', icon: UserIcon(), path: '/mypage' },
 ]
 
 // 하단 네비게이션 바: 4개의 버튼, 각 버튼은 하나의 SVG로만 구성
