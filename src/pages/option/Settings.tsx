@@ -49,7 +49,12 @@ export default function Settings(): React.ReactElement {
             <button className="settings-wire__row" type="button">
               프로필 설정
             </button>
-            <button className="settings-wire__row" type="button">
+            {/*  비밀번호 변경 이동 */}
+            <button
+              className="settings-wire__row"
+              type="button"
+              onClick={() => navigate("/option/password")}
+            >
               비밀번호 변경
             </button>
           </section>
@@ -79,10 +84,14 @@ export default function Settings(): React.ReactElement {
           {/* 4) 기타 */}
           <section className="settings-wire__section">
             <div className="settings-wire__sectionTitle">기타</div>
+             {/* 로그아웃: 토큰 삭제 후 로그인 이동 */}
             <button
               className="settings-wire__row"
               type="button"
-              onClick={handleLogout}
+              onClick={() => {
+                localStorage.removeItem("token");
+                window.location.hash = "#/login";
+              }}
             >
               로그아웃
             </button>
