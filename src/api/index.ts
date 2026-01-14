@@ -1,38 +1,39 @@
 // src/api/index.ts
-
 import axios from "axios";
 
-// baseURL 값으로 /api 를 기본으로 가지고 있는 axios 객체를 만들어서  
 const api = axios.create({
-    baseURL: "/api"
+  baseURL: "/api",
 });
 
-// 요청 인터셉터 (예: 토큰 자동 추가)
+// ✅ 요청 인터셉터: Bearer 자동 보정
 api.interceptors.request.use((config) => {
-    //const token = localStorage.token; 과 동일한 동작
-    const token = localStorage.getItem('token');
-    //만일 token 이 존재한다면
-    if (token) {
-        // 1. config.headers가 undefined일 경우 빈 객체로 초기화합니다.
-        config.headers = config.headers || {};
+  const token = localStorage.getItem("token");
 
-        // 2. 이제 config.headers는 객체임이 보장되므로 안전하게 토큰을 추가합니다.
-        config.headers.Authorization = token;
-    }
-    return config;
+  if (token) {
+    config.headers = config.headers ?? {};
+
+    // ✅ token이 이미 Bearer 포함이면 그대로, 아니면 Bearer 붙이기
+    const authValue = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+    config.headers.Authorization = authValue;
+  }
+
+  return config;
 });
 
+// ✅ 응답 인터셉터: HashRouter 기준 로그인 이동
 api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        // 401 Unauthorized = 토큰 만료 or 유효하지 않음
-        if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = '/login';  // 또는 navigate 사용
-        }
-        return Promise.reject(error);
+  (res) => res,
+  (error) => {
+    const status = error?.response?.status;
+
+    // 401/403 모두 토큰 문제일 가능성이 높으니 같이 처리
+    if (status === 401 || status === 403) {
+      localStorage.removeItem("token");
+      window.location.hash = "#/login";
     }
+
+    return Promise.reject(error);
+  }
 );
 
-//리턴해준다. 
 export default api;

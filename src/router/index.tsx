@@ -23,6 +23,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import MyPage from "../pages/option/MyPage";
 import Settings from "../pages/option/Settings";
 import ChangePassword from "../pages/option/ChangePassword";
+import ProfileImageSettings from "../pages/option/ProfileImageSettings";
 
 // 페이지 routing 정보를 배열에 미리 저장해둔다.
 const routes = [
@@ -35,6 +36,7 @@ const routes = [
     { path: "/mypage", element: <MyPage /> },
     { path: "/option/settings", element: <Settings /> },
     { path: "/option/password", element: <ChangePassword /> },
+    { path: "/option/profile-image", element: <ProfileImageSettings /> },
 
     // 보호된 페이지 (로그인 필요)
     // spring boot 서버에 넣어서 실행하면 최초 로딩될때  /index.html 경로로 로딩된다.

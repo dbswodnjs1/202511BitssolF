@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import authApi from "../../api/authApi"; // ✅ Bearer 자동 첨부 + 401/403 자동 처리
+import api from "../../api"; // ✅ index.ts 통일 버전
 import StatusBar from "../../components/layout/StatusBar";
 import BottomNav from "../../components/layout/BottomNav";
 import "./ChangePassword.wire.css";
@@ -20,14 +20,13 @@ export default function ChangePassword(): React.ReactElement {
   /**
    * ✅ 비밀번호 변경 요청
    * - 성공하면: 보안상 "무조건 로그아웃"
-   * - 실패하면: 에러 메시지 표시
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
     // 1) 프론트 1차 검증
-    if (!currentPassword || !newPassword) {
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
       setErrorMsg("현재 비밀번호와 새 비밀번호를 입력해 주세요.");
       return;
     }
@@ -38,15 +37,19 @@ export default function ChangePassword(): React.ReactElement {
 
     setIsSubmitting(true);
     try {
-      // 2) 백엔드 호출 (baseURL이 /api 라면 실제 요청은 /api/v1/users/me/password)
-      await authApi.patch("/v1/users/me/password", {
+      // 2) ✅ 백엔드 호출
+      // baseURL이 "/api"면 실제 요청은 "/api/v1/users/me/password"
+      await api.patch("/v1/users/me/password", {
         currentPassword,
         newPassword,
       });
 
       // 3) ✅ 요구사항: 변경 후 무조건 로그아웃
       localStorage.removeItem("token");
+
+      // HashRouter 기준 이동 (팀에서 이 방식 쓰면 계속 유지)
       window.location.hash = "#/login";
+      // 또는: navigate("/login", { replace: true });  // 팀에서 navigate로 통일할 때
     } catch (err: any) {
       // 4) 서버 메시지 우선 표시(있으면)
       const serverMsg =
@@ -84,7 +87,6 @@ export default function ChangePassword(): React.ReactElement {
           <section className="pw-wire__section">
             <div className="pw-wire__sectionTitle">비밀번호 입력</div>
 
-            {/* ✅ 폼 제출 시 handleSubmit 실행 */}
             <form className="pw-wire__form" onSubmit={handleSubmit}>
               <label className="pw-wire__label">
                 현재 비밀번호
@@ -119,7 +121,6 @@ export default function ChangePassword(): React.ReactElement {
                 />
               </label>
 
-              {/* ✅ 에러 메시지 */}
               {errorMsg && <div className="pw-wire__error">{errorMsg}</div>}
 
               <button className="pw-wire__submit" type="submit" disabled={isSubmitting}>
@@ -134,7 +135,6 @@ export default function ChangePassword(): React.ReactElement {
         </main>
       </div>
 
-      {/* ✅ 하단바 유지 */}
       <BottomNav />
     </>
   );
