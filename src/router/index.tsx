@@ -27,9 +27,6 @@ import ProfileImageSettings from "../pages/option/ProfileImageSettings";
 import RecentPlaysPage from "../components/mypage/RecentPlaysPage";
 import MyUploadsPage from "../components/mypage/MyUploadsPage";
 import FavoritesPage from "../components/mypage/FavoritesPage";
-import NicknameSettings from "../pages/option/NicknameSettings";
-import EmailSettings from "../pages/option/EmailSettings";
-import PhoneSettings from "../pages/option/PhoneSettings";
 import ProfileSettings from "../pages/option/ProfileSettings";
 
 // 페이지 routing 정보를 배열에 미리 저장해둔다.
@@ -47,9 +44,6 @@ const routes = [
     { path: "/mypage/recent", element: <RecentPlaysPage /> },
     { path: "/mypage/uploads", element: <MyUploadsPage /> },
     { path: "/mypage/favorites", element: <FavoritesPage /> },
-    { path: "/option/nickname", element: <NicknameSettings /> },
-    { path: "/option/email", element: <EmailSettings /> },
-    { path: "/option/phone", element: <PhoneSettings /> },
     { path: "/option/profile", element: <ProfileSettings /> },
 
     // 보호된 페이지 (로그인 필요)

@@ -1,0 +1,10 @@
+/* src/styles/bootstrap-custom.css */
+
+/* ✅ 스크롤은 유지, 스크롤바만 숨김 */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE/Edge legacy */
+  scrollbar-width: none;    /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;            /* Chrome/Safari */
+}

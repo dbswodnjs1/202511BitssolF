@@ -1,4 +1,5 @@
 // src/pages/option/ProfileSettings.tsx
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import StatusBar from "../../components/layout/StatusBar";
@@ -24,10 +25,72 @@ import { normalizePhone } from "../../utils/validators";
 
 type CheckState = "idle" | "checking" | "ok" | "dup" | "invalid";
 
+const APP_MAX_WIDTH = 420;
+const BOTTOM_SPACER = "110px";
+
+// 하단바 폭 줄이고 싶으면 조절
+const NAV_SIDE_GAP = 28;
+const NAV_MAX_WIDTH = 380;
+
+/** ----------------------------
+ * ✅ 로컬 형식 검증(프론트 1차)
+ * ---------------------------- */
+function validateNickname(v: string): string | null {
+  const s = v.trim();
+  if (!s) return "닉네임을 입력해 주세요.";
+  if (s.length < 2 || s.length > 12) return "닉네임은 2~12자로 입력해 주세요.";
+  const re = /^[A-Za-z0-9가-힣_]+$/;
+  if (!re.test(s)) return "닉네임은 한글/영문/숫자/_ 만 가능합니다.";
+  return null;
+}
+
+function validateEmailLite(v: string): string | null {
+  const s = v.trim().toLowerCase();
+  if (!s) return "이메일을 입력해 주세요.";
+  if (s.length > 254) return "이메일이 너무 깁니다.";
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  if (!re.test(s)) return "이메일 형식이 아니에요. (예: email@example.com)";
+  return null;
+}
+
+function validateKoreanMobile(v: string): string | null {
+  const digits = (v || "").replace(/\D/g, "");
+  if (!digits) return "전화번호를 입력해 주세요.";
+  const re = /^01[016789]\d{7,8}$/;
+  if (!re.test(digits)) return "휴대폰 번호 형식이 아니에요. (예: 01012345678)";
+  return null;
+}
+
+/** ----------------------------
+ * ✅ 상태 라벨(필드별)
+ * ---------------------------- */
+function nicknameStateLabel(state: CheckState, value: string): string {
+  if (state === "checking") return "확인중...";
+  if (state === "ok") return "사용 가능";
+  if (state === "dup") return "이미 사용 중";
+  if (state === "invalid") return validateNickname(value) ?? "형식을 확인해 주세요.";
+  return "";
+}
+
+function emailStateLabel(state: CheckState, value: string): string {
+  if (state === "checking") return "확인중...";
+  if (state === "ok") return "사용 가능";
+  if (state === "dup") return "이미 사용 중";
+  if (state === "invalid") return validateEmailLite(value) ?? "형식을 확인해 주세요.";
+  return "";
+}
+
+function phoneStateLabel(state: CheckState, value: string): string {
+  if (state === "checking") return "확인중...";
+  if (state === "ok") return "사용 가능";
+  if (state === "dup") return "이미 사용 중";
+  if (state === "invalid") return validateKoreanMobile(value) ?? "형식을 확인해 주세요.";
+  return "";
+}
+
 export default function ProfileSettings(): React.ReactElement {
   const navigate = useNavigate();
 
-  // 서버 값
   const [loading, setLoading] = useState(true);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
@@ -35,12 +98,21 @@ export default function ProfileSettings(): React.ReactElement {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
-  // 이미지 업로드용
-  const [file, setFile] = useState<File | null>(null);
-  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
-  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  // ✅ 변경 여부 비교용(원본)
+  const [orig, setOrig] = useState({ nickname: "", email: "", phone: "" });
 
-  // 중복확인 상태
+  // ✅ 이미지 업로드 “예약” 상태
+  const [file, setFile] = useState<File | null>(null);
+  const [resetImagePending, setResetImagePending] = useState(false);
+
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  // 중복확인 상태 (버튼은 닉네임만 유지, 이메일/전화는 저장 시에만 checking)
   const [nickCheck, setNickCheck] = useState<CheckState>("idle");
   const [emailCheck, setEmailCheck] = useState<CheckState>("idle");
   const [phoneCheck, setPhoneCheck] = useState<CheckState>("idle");
@@ -49,20 +121,53 @@ export default function ProfileSettings(): React.ReactElement {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const resolvedServerUrl = useMemo(() => resolveProfileImageUrl(profileImageUrl), [profileImageUrl]);
-  const imgSrc = useMemo(() => (previewUrl ? previewUrl : resolvedServerUrl || ""), [previewUrl, resolvedServerUrl]);
+  const resolvedServerUrl = useMemo(
+    () => resolveProfileImageUrl(profileImageUrl),
+    [profileImageUrl]
+  );
+
+  // ✅ reset 예약이면 기본 이미지로 미리보기(즉시 API 호출 X)
+  const imgSrc = useMemo(() => {
+    if (resetImagePending) return "/default-profile.png";
+    return previewUrl ? previewUrl : resolvedServerUrl || "";
+  }, [resetImagePending, previewUrl, resolvedServerUrl]);
+
+  // ✅ 변경 감지(렌더링 안내문/저장 로직 공통에 사용)
+  const vNick = nickname.trim();
+  const vEmail = email.trim().toLowerCase();
+  const vPhone = normalizePhone(phone) || "";
+
+  const oNick = (orig.nickname ?? "").trim();
+  const oEmail = (orig.email ?? "").trim().toLowerCase();
+  const oPhone = normalizePhone(orig.phone) || "";
+
+  const nickChanged = vNick !== oNick;
+  const emailChanged = vEmail !== oEmail;
+  const phoneChanged = vPhone !== oPhone;
+
+  const imageChanged = resetImagePending || !!file;
 
   const refresh = async () => {
     const me = await getMe();
-    setNickname(me.nickname ?? "");
-    setEmail(me.email ?? "");
-    setPhone(me.phone ?? "");
+
+    const nextNick = me.nickname ?? "";
+    const nextEmail = me.email ?? "";
+    const nextPhone = me.phone ?? "";
+
+    setNickname(nextNick);
+    setEmail(nextEmail);
+    setPhone(nextPhone);
     setProfileImageUrl(me.profileImageUrl ?? null);
 
-    // 값이 새로 세팅되면 체크 상태는 초기화
+    setOrig({ nickname: nextNick, email: nextEmail, phone: nextPhone });
+
     setNickCheck("idle");
     setEmailCheck("idle");
     setPhoneCheck("idle");
+
+    // ✅ 새로고침 시 예약 상태 해제
+    setFile(null);
+    setResetImagePending(false);
   };
 
   useEffect(() => {
@@ -70,7 +175,6 @@ export default function ProfileSettings(): React.ReactElement {
       try {
         await refresh();
       } catch {
-        // 토큰 만료/미인증 등
         navigate("/login", { replace: true });
       } finally {
         setLoading(false);
@@ -79,261 +183,367 @@ export default function ProfileSettings(): React.ReactElement {
   }, [navigate]);
 
   // ----------------------------
-  // 중복 확인
+  // ✅ 닉네임만 "중복확인 버튼" 유지(선택 기능)
   // ----------------------------
   const runCheckNickname = async () => {
-    const v = nickname.trim();
-    if (!v) return setNickCheck("invalid");
+    if (saving || loading) return;
+    setMsg(null);
+
+    // 변경이 없으면 굳이 API 안 탐
+    if (!nickChanged) {
+      setNickCheck("ok");
+      setMsg("현재 닉네임입니다.");
+      return;
+    }
+
+    const err = validateNickname(nickname);
+    if (err) {
+      setNickCheck("invalid");
+      setMsg(err);
+      return;
+    }
+
+    const snapshot = nickname.trim();
     setNickCheck("checking");
     try {
-      const ok = await checkNickname(v);
+      const ok = await checkNickname(snapshot);
+      // 입력이 바뀌면 결과 반영 X
+      if (nickname.trim() !== snapshot) return;
+
       setNickCheck(ok ? "ok" : "dup");
+      if (!ok) setMsg("이미 사용 중인 닉네임입니다.");
     } catch {
       setNickCheck("idle");
-    }
-  };
-
-  const runCheckEmail = async () => {
-    const v = email.trim().toLowerCase();
-    if (!v) return setEmailCheck("invalid");
-    setEmailCheck("checking");
-    try {
-      const ok = await checkEmail(v);
-      setEmailCheck(ok ? "ok" : "dup");
-    } catch {
-      setEmailCheck("idle");
-    }
-  };
-
-  const runCheckPhone = async () => {
-    const v = normalizePhone(phone) || "";
-    if (!v) return setPhoneCheck("invalid");
-    setPhoneCheck("checking");
-    try {
-      const ok = await checkPhone(v);
-      setPhoneCheck(ok ? "ok" : "dup");
-    } catch {
-      setPhoneCheck("idle");
-    }
-  };
-
-  const checkLabel = (s: CheckState) => {
-    if (s === "checking") return "확인중...";
-    if (s === "ok") return "사용 가능";
-    if (s === "dup") return "이미 사용 중";
-    if (s === "invalid") return "값을 입력하세요";
-    return "";
-  };
-
-  // ----------------------------
-  // 저장(PATCH)
-  // ----------------------------
-  const saveNickname = async () => {
-    setMsg(null);
-    const v = nickname.trim();
-    if (!v) return setMsg("닉네임을 입력해 주세요.");
-    setSaving(true);
-    try {
-      await changeMyNickname(v);
-      setMsg("닉네임이 변경되었습니다.");
-      await refresh();
-    } catch (err: any) {
-      const serverMsg = err?.response?.data?.message || err?.response?.data || "닉네임 변경 실패";
-      setMsg(typeof serverMsg === "string" ? serverMsg : "닉네임 변경 실패");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveEmail = async () => {
-    setMsg(null);
-    const v = email.trim().toLowerCase();
-    if (!v) return setMsg("이메일을 입력해 주세요.");
-    setSaving(true);
-    try {
-      await changeMyEmail(v);
-      setMsg("이메일이 변경되었습니다.");
-      await refresh();
-    } catch (err: any) {
-      const serverMsg = err?.response?.data?.message || err?.response?.data || "이메일 변경 실패";
-      setMsg(typeof serverMsg === "string" ? serverMsg : "이메일 변경 실패");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const savePhone = async () => {
-    setMsg(null);
-    const v = normalizePhone(phone) || "";
-    if (!v) return setMsg("전화번호를 입력해 주세요.");
-    setSaving(true);
-    try {
-      await changeMyPhone(v);
-      setMsg("전화번호가 변경되었습니다.");
-      await refresh();
-    } catch (err: any) {
-      const serverMsg = err?.response?.data?.message || err?.response?.data || "전화번호 변경 실패";
-      setMsg(typeof serverMsg === "string" ? serverMsg : "전화번호 변경 실패");
-    } finally {
-      setSaving(false);
+      setMsg("닉네임 중복 확인 실패");
     }
   };
 
   // ----------------------------
-  // 이미지 업로드/초기화
+  // ✅ 하단(전화번호 아래) “변경사항 저장”
+  // - 이미지(업로드/리셋)도 여기서 같이 처리
+  // - 이메일/전화번호는 중복확인 버튼 없음 → 저장 시점에만 체크
   // ----------------------------
-  const onUploadImage = async () => {
-    if (!file) return;
+  const saveAll = async () => {
+    if (saving || loading) return;
+
     setMsg(null);
+
+    if (!nickChanged && !emailChanged && !phoneChanged && !imageChanged) {
+      setMsg("변경된 내용이 없습니다.");
+      return;
+    }
+
+    // ✅ 형식 검증(변경된 것만)
+    if (nickChanged) {
+      const err = validateNickname(vNick);
+      if (err) {
+        setNickCheck("invalid");
+        setMsg(err);
+        return;
+      }
+    }
+    if (emailChanged) {
+      const err = validateEmailLite(vEmail);
+      if (err) {
+        setEmailCheck("invalid");
+        setMsg(err);
+        return;
+      }
+    }
+    if (phoneChanged) {
+      const err = validateKoreanMobile(vPhone);
+      if (err) {
+        setPhoneCheck("invalid");
+        setMsg(err);
+        return;
+      }
+    }
+
     setSaving(true);
+
     try {
-      const data = await uploadMyProfileImage(file);
-      setProfileImageUrl(data.profileImageUrl ?? null);
-      setFile(null);
-      setMsg("프로필 이미지가 변경되었습니다.");
-      await refresh();
+      // ✅ 1) 이미지 먼저 처리
+      if (resetImagePending) {
+        await resetMyProfileImage();
+        setProfileImageUrl(null);
+        setFile(null);
+        setResetImagePending(false);
+      } else if (file) {
+        const data = await uploadMyProfileImage(file);
+        setProfileImageUrl(data.profileImageUrl ?? null);
+        setFile(null);
+      }
+
+      // ✅ 2) 닉네임/이메일/전화 변경 처리
+      if (nickChanged) {
+        setNickCheck("checking");
+        const ok = await checkNickname(vNick);
+        if (!ok) {
+          setNickCheck("dup");
+          setMsg("이미 사용 중인 닉네임입니다.");
+          return;
+        }
+        setNickCheck("ok");
+        await changeMyNickname(vNick);
+      }
+
+      if (emailChanged) {
+        setEmailCheck("checking");
+        const ok = await checkEmail(vEmail);
+        if (!ok) {
+          setEmailCheck("dup");
+          setMsg("이미 사용 중인 이메일입니다.");
+          return;
+        }
+        setEmailCheck("ok");
+        await changeMyEmail(vEmail);
+      }
+
+      if (phoneChanged) {
+        setPhoneCheck("checking");
+        const ok = await checkPhone(vPhone);
+        if (!ok) {
+          setPhoneCheck("dup");
+          setMsg("이미 사용 중인 전화번호입니다.");
+          return;
+        }
+        setPhoneCheck("ok");
+        await changeMyPhone(vPhone);
+      }
+
+      setMsg("저장되었습니다.");
+      await refresh(); // ✅ 실제 서버 상태로 동기화
     } catch (err: any) {
-      const serverMsg = err?.response?.data?.message || err?.response?.data || "이미지 업로드 실패";
-      setMsg(typeof serverMsg === "string" ? serverMsg : "이미지 업로드 실패");
+      const serverMsg =
+        err?.response?.data?.message || err?.response?.data || "저장에 실패했습니다.";
+      setMsg(typeof serverMsg === "string" ? serverMsg : "저장에 실패했습니다.");
+
+      // ✅ 일부만 성공했을 수도 있으니 서버 상태로 맞추기
+      try {
+        await refresh();
+      } catch {
+        // refresh 실패는 로그인 만료 등일 수 있음
+      }
     } finally {
       setSaving(false);
     }
   };
 
-  const onResetImage = async () => {
-    setMsg(null);
-    setSaving(true);
-    try {
-      await resetMyProfileImage();
-      setProfileImageUrl(null);
-      setFile(null);
-      setMsg("기본 이미지로 변경되었습니다.");
-      await refresh();
-    } catch (err: any) {
-      const serverMsg = err?.response?.data?.message || err?.response?.data || "이미지 초기화 실패";
-      setMsg(typeof serverMsg === "string" ? serverMsg : "이미지 초기화 실패");
-    } finally {
-      setSaving(false);
-    }
-  };
+  // ✅ 저장 시점 중복확인 방식 안내문(UX용)
+  const emailHint =
+    emailCheck !== "idle"
+      ? emailStateLabel(emailCheck, email)
+      : emailChanged
+      ? "저장 시 중복 여부를 확인합니다."
+      : "";
+
+  const phoneHint =
+    phoneCheck !== "idle"
+      ? phoneStateLabel(phoneCheck, phone)
+      : phoneChanged
+      ? "저장 시 중복 여부를 확인합니다."
+      : "";
 
   return (
     <>
-      <div className="page-screen settings-wire">
-        <StatusBar />
+      {/* ✅ 이 파일에서만 스크롤바 숨김 */}
+      <style>{`
+        .ps-no-scrollbar {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .ps-no-scrollbar::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
+        }
+      `}</style>
 
-        <header className="settings-wire__top">
-          <button
-            type="button"
-            className="settings-wire__back"
-            aria-label="뒤로가기"
-            onClick={() => navigate(-1)}
+      <div
+        className="page-screen mx-auto d-flex flex-column text-white"
+        style={{
+          maxWidth: APP_MAX_WIDTH,
+          height: "100dvh",
+          backgroundColor: "#444",
+          overflow: "hidden",
+        }}
+      >
+        <div className="flex-shrink-0">
+          <StatusBar />
+        </div>
+
+        <div className="flex-grow-1 d-flex flex-column px-3 pt-2" style={{ minHeight: 0 }}>
+          <header className="d-flex align-items-center justify-content-between p-3 rounded-4 border border-light border-opacity-25 shadow-sm mb-3">
+            <button
+              type="button"
+              className="btn btn-outline-light btn-sm rounded-3"
+              aria-label="뒤로가기"
+              onClick={() => navigate(-1)}
+              style={{ width: 40, height: 40 }}
+              disabled={saving}
+            >
+              ←
+            </button>
+
+            <h3 className="m-0 fw-bold fs-5">프로필 설정</h3>
+            <div style={{ width: 40, height: 40 }} />
+          </header>
+
+          <main
+            className="flex-grow-1 overflow-auto ps-no-scrollbar"
+            style={{
+              paddingBottom: BOTTOM_SPACER,
+              WebkitOverflowScrolling: "touch",
+            }}
           >
-            ←
-          </button>
-          <h3 className="settings-wire__title">프로필 설정</h3>
-          <div className="settings-wire__spacer" />
-        </header>
+            {loading ? (
+              <div className="p-3 rounded-4 border border-light border-opacity-25 shadow-sm">
+                불러오는 중...
+              </div>
+            ) : (
+              <>
+                {msg && (
+                  <div className="alert alert-dark text-white border border-light border-opacity-25 rounded-4">
+                    {msg}
+                  </div>
+                )}
 
-        <main className="settings-wire__content">
-          {loading ? (
-            <div style={{ padding: 12 }}>불러오는 중...</div>
-          ) : (
-            <>
-              {/* 프로필 이미지 섹션 */}
-              <section className="settings-wire__section">
-                <div className="settings-wire__sectionTitle">프로필 이미지</div>
+                {/* 프로필 이미지 */}
+                <section className="p-3 rounded-4 border border-light border-opacity-25 shadow-sm mb-3">
+                  <div className="fw-bold mb-3">프로필 이미지</div>
 
-                <div style={{ padding: 12 }}>
-                  <div
-                    style={{
-                      width: 120,
-                      height: 120,
-                      borderRadius: "50%",
-                      overflow: "hidden",
-                      background: "#ddd",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: 12,
-                    }}
-                  >
-                    {imgSrc ? (
-                      <img
-                        src={imgSrc}
-                        alt="profile"
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src = "/default-profile.png";
+                  <div className="d-flex align-items-center gap-3 flex-wrap">
+                    <div
+                      className="rounded-circle overflow-hidden border border-light border-opacity-25"
+                      style={{
+                        width: 120,
+                        height: 120,
+                        background: "#ddd",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {imgSrc ? (
+                        <img
+                          src={imgSrc}
+                          alt="profile"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = "/default-profile.png";
+                          }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: 28, fontWeight: 700, color: "#666" }}>P</span>
+                      )}
+                    </div>
+
+                    <div className="d-flex flex-column gap-2">
+                      <input
+                        className="form-control form-control-sm bg-transparent text-white border border-light border-opacity-25"
+                        type="file"
+                        accept="image/*"
+                        disabled={saving}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0] ?? null;
+                          setFile(f);
+                          setResetImagePending(false);
+                          setMsg(null);
+
+                          // 같은 파일 다시 선택 가능하게 하고 싶으면(브라우저에 따라 필요)
+                          e.currentTarget.value = "";
                         }}
                       />
-                    ) : (
-                      <span style={{ fontSize: 28, fontWeight: 700, color: "#666" }}>P</span>
-                    )}
+
+                      <div className="d-flex gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          className="btn btn-outline-light btn-sm rounded-3"
+                          disabled={saving}
+                          onClick={() => {
+                            setResetImagePending(true);
+                            setFile(null);
+                            setMsg("기본 이미지로 변경이 예약되었습니다. 아래 저장 버튼을 눌러 반영하세요.");
+                          }}
+                        >
+                          기본 이미지로
+                        </button>
+
+                        {(resetImagePending || file) && (
+                          <button
+                            type="button"
+                            className="btn btn-outline-light btn-sm rounded-3"
+                            disabled={saving}
+                            onClick={() => {
+                              setResetImagePending(false);
+                              setFile(null);
+                              setMsg("이미지 변경 예약이 취소되었습니다.");
+                            }}
+                          >
+                            변경 취소
+                          </button>
+                        )}
+                      </div>
+
+                      {file && <div className="small text-white-50">선택됨: {file.name}</div>}
+                      {resetImagePending && (
+                        <div className="small text-white-50">기본 이미지로 변경 예약됨</div>
+                      )}
+                    </div>
                   </div>
+                </section>
+
+                {/* 닉네임 (중복확인 버튼 유지) */}
+                <section className="p-3 rounded-4 border border-light border-opacity-25 shadow-sm mb-3">
+                  <div className="fw-bold mb-3">닉네임</div>
 
                   <input
-                    id="profileFile"
-                    type="file"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  />
-                  <label
-                    htmlFor="profileFile"
-                    style={{
-                      display: "inline-block",
-                      padding: "8px 12px",
-                      border: "1px solid #999",
-                      borderRadius: 8,
-                      cursor: "pointer",
-                    }}
-                  >
-                    파일 선택
-                  </label>
-
-                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                    <button type="button" disabled={!file || saving} onClick={onUploadImage}>
-                      업로드
-                    </button>
-                    <button type="button" disabled={saving} onClick={onResetImage}>
-                      기본 이미지로 되돌리기
-                    </button>
-                  </div>
-                </div>
-              </section>
-
-              {/* 닉네임 섹션 */}
-              <section className="settings-wire__section">
-                <div className="settings-wire__sectionTitle">닉네임</div>
-                <div style={{ padding: 12 }}>
-                  <input
-                    className="form-control"
+                    className="form-control bg-transparent text-white border border-light border-opacity-25"
                     value={nickname}
+                    maxLength={12}
+                    disabled={saving}
                     onChange={(e) => {
                       setNickname(e.target.value);
                       setNickCheck("idle");
                     }}
-                    placeholder="닉네임"
+                    placeholder="2~12자 / 한글·영문·숫자·_"
                   />
-                  <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
-                    <button type="button" disabled={saving || nickCheck === "checking"} onClick={runCheckNickname}>
+
+                  <div className="d-flex flex-column gap-1 mt-2">
+                    <button
+                      type="button"
+                      className="btn btn-outline-light btn-sm rounded-3 text-nowrap px-3 align-self-start"
+                      style={{ minWidth: 96 }}
+                      disabled={saving || nickCheck === "checking"}
+                      onClick={runCheckNickname}
+                    >
                       중복확인
                     </button>
-                    <span>{checkLabel(nickCheck)}</span>
-                  </div>
-                  <button style={{ marginTop: 10, width: "100%" }} disabled={saving} onClick={saveNickname}>
-                    저장
-                  </button>
-                </div>
-              </section>
 
-              {/* 이메일 섹션 */}
-              <section className="settings-wire__section">
-                <div className="settings-wire__sectionTitle">이메일</div>
-                <div style={{ padding: 12 }}>
+                    <div className="small text-white-50 ms-1" style={{ overflowWrap: "anywhere" }}>
+                      {nicknameStateLabel(nickCheck, nickname)}
+                    </div>
+                  </div>
+                </section>
+
+                {/* 이메일 (중복확인 버튼 제거: 저장 시 확인) */}
+                <section className="p-3 rounded-4 border border-light border-opacity-25 shadow-sm mb-3">
+                  <div className="fw-bold mb-3">이메일</div>
+
                   <input
-                    className="form-control"
+                    type="email"
+                    inputMode="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    autoComplete="email"
+                    maxLength={254}
+                    disabled={saving}
+                    className="form-control bg-transparent text-white border border-light border-opacity-25"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -341,24 +551,22 @@ export default function ProfileSettings(): React.ReactElement {
                     }}
                     placeholder="email@example.com"
                   />
-                  <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
-                    <button type="button" disabled={saving || emailCheck === "checking"} onClick={runCheckEmail}>
-                      중복확인
-                    </button>
-                    <span>{checkLabel(emailCheck)}</span>
-                  </div>
-                  <button style={{ marginTop: 10, width: "100%" }} disabled={saving} onClick={saveEmail}>
-                    저장
-                  </button>
-                </div>
-              </section>
 
-              {/* 전화번호 섹션 */}
-              <section className="settings-wire__section">
-                <div className="settings-wire__sectionTitle">전화번호</div>
-                <div style={{ padding: 12 }}>
+                  <div className="small text-white-50 ms-1 mt-2" style={{ overflowWrap: "anywhere" }}>
+                    {emailHint}
+                  </div>
+                </section>
+
+                {/* 전화번호 (중복확인 버튼 제거: 저장 시 확인) */}
+                <section className="p-3 rounded-4 border border-light border-opacity-25 shadow-sm">
+                  <div className="fw-bold mb-3">전화번호</div>
+
                   <input
-                    className="form-control"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    disabled={saving}
+                    className="form-control bg-transparent text-white border border-light border-opacity-25"
                     value={phone}
                     onChange={(e) => {
                       setPhone(e.target.value);
@@ -366,29 +574,45 @@ export default function ProfileSettings(): React.ReactElement {
                     }}
                     placeholder="01012345678"
                   />
-                  <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
-                    <button type="button" disabled={saving || phoneCheck === "checking"} onClick={runCheckPhone}>
-                      중복확인
-                    </button>
-                    <span>{checkLabel(phoneCheck)}</span>
-                  </div>
-                  <button style={{ marginTop: 10, width: "100%" }} disabled={saving} onClick={savePhone}>
-                    저장
-                  </button>
-                </div>
-              </section>
 
-              {msg && (
-                <section className="settings-wire__section">
-                  <div style={{ padding: 12 }}>{msg}</div>
+                  <div className="small text-white-50 ms-1 mt-2" style={{ overflowWrap: "anywhere" }}>
+                    {phoneHint}
+                  </div>
                 </section>
-              )}
-            </>
-          )}
-        </main>
+
+                {/* ✅ 전화번호 아래 저장 버튼(고정 아님) */}
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    className="btn btn-light w-100 rounded-4 fw-bold shadow-sm"
+                    disabled={saving || loading}
+                    onClick={saveAll}
+                  >
+                    {saving ? "저장중..." : "변경사항 저장"}
+                  </button>
+
+                  <div className="small text-white-50 mt-2">
+                    변경한 항목만 저장됩니다.
+                    {imageChanged ? " (이미지 변경도 함께 저장됩니다.)" : ""}
+                  </div>
+                </div>
+              </>
+            )}
+          </main>
+        </div>
       </div>
 
-      <BottomNav />
+      {/* ✅ 하단바 고정 */}
+      <div
+        className="position-fixed start-50 translate-middle-x"
+        style={{
+          width: `min(calc(100vw - ${NAV_SIDE_GAP * 2}px), ${NAV_MAX_WIDTH}px)`,
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+          zIndex: 1030,
+        }}
+      >
+        <BottomNav />
+      </div>
     </>
   );
 }

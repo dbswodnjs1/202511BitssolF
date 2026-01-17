@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router-dom'
 import router from './router'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import '../styles/index.css'
+import '../styles/bootstrap-custom.css'
 
 // index.html 의 <div id="root"></div>에 앱을 마운트
 createRoot(document.getElementById('root')!).render(

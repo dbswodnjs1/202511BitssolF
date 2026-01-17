@@ -1,31 +1,31 @@
 // src/pages/option/mypage/RecentPlaysPage.tsx
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import api from "../../api";
 import { getRecentPlaysAll, type SoundDto } from "../../api/mypage";
 import { usePlayer } from "../../hooks/usePlayer";
+
+import StatusBar from "../../components/layout/StatusBar";
 import BottomNav from "../../components/layout/BottomNav";
-import api from "../../api";
-import "./RecentPlaysPage.css";
 
 const PAGE_SIZE = 20;
+
+const APP_MAX_WIDTH = 420;
+const BOTTOM_SPACER = "110px";
+
+// 하단바 폭 줄이고 싶으면 조절
+const NAV_SIDE_GAP = 28;
+const NAV_MAX_WIDTH = 380;
 
 /**
  * ✅ 최근 재생 삭제 API
  * - 백엔드: DELETE /v1/me/recent-plays/{soundId}
- * - 기존처럼 여러 URL을 "찍어보는 방식"은 유지보수/디버깅 난이도만 올림
- * - API가 확정되면 1개로 고정하는 게 정답
  */
 async function deleteRecentPlay(soundId: number) {
   await api.delete(`/v1/me/recent-plays/${soundId}`);
 }
-
-/**
- * ✅ (추가-재원) 확인 문구: "삭제"지만 콘텐츠 삭제가 아니라 "내 기록 삭제"임
- * - 사용자가 '콘텐츠가 지워지는지' 오해할 수 있어서 문구로 방지
- */
-const CONFIRM_DELETE_RECENT =
-  "최근 재생 목록에서 삭제하시겠습니까?\n(콘텐츠는 삭제되지 않고, 내 최근 재생 기록만 제거됩니다.)";
 
 export default function RecentPlaysPage(): React.ReactElement {
   const navigate = useNavigate();
@@ -33,116 +33,345 @@ export default function RecentPlaysPage(): React.ReactElement {
 
   const [all, setAll] = useState<SoundDto[]>([]);
   const [page, setPage] = useState(1);
+
+  const [loading, setLoading] = useState(true);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  const [removingId, setRemovingId] = useState<number | null>(null);
+
+  // ✅ 내부 스크롤 컨테이너(IntersectionObserver root로 사용)
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+  // ✅ 삭제 확인 모달 상태
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ soundId: number; title?: string } | null>(
+    null
+  );
+
+  const uiLocked = loading || removingId !== null;
+
+  // ESC로 모달 닫기(삭제 중이면 닫기 막음)
   useEffect(() => {
-    // ✅ 백엔드가 "전체 리스트"를 내려주므로 프론트에서 PAGE_SIZE로 잘라 무한스크롤
-    getRecentPlaysAll().then(setAll).catch(() => setAll([]));
+    if (!showConfirm) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (removingId !== null) return;
+        setShowConfirm(false);
+        setPendingDelete(null);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showConfirm, removingId]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      setLoading(true);
+      setErrMsg(null);
+      try {
+        const list = await getRecentPlaysAll();
+        if (!mounted) return;
+        setAll(list ?? []);
+      } catch {
+        if (!mounted) return;
+        setAll([]);
+        setErrMsg("최근 재생 목록을 불러오지 못했습니다.");
+      } finally {
+        if (!mounted) return;
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const visible = useMemo(() => all.slice(0, page * PAGE_SIZE), [all, page]);
 
   useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
+    const rootEl = scrollRef.current;
+    const sentinelEl = sentinelRef.current;
+    if (!rootEl || !sentinelEl) return;
 
-    const io = new IntersectionObserver((entries) => {
-      if (!entries[0]?.isIntersecting) return;
-      const maxPage = Math.ceil(all.length / PAGE_SIZE);
-      setPage((p) => (p < maxPage ? p + 1 : p));
-    });
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        const maxPage = Math.ceil(all.length / PAGE_SIZE);
+        setPage((p) => (p < maxPage ? p + 1 : p));
+      },
+      { root: rootEl, rootMargin: "200px", threshold: 0 }
+    );
 
-    io.observe(el);
+    io.observe(sentinelEl);
     return () => io.disconnect();
   }, [all.length]);
 
   const onClickCard = (soundId: number) => {
-    playSound(soundId);
-    navigate("/soundplayer");
+    Promise.resolve((playSound as any)(soundId)).finally(() => {
+      navigate("/soundplayer");
+    });
   };
 
-  /**
-   * ✅ 최근 재생 삭제 버튼
-   * - 서버에서 내 기록(play_history 1건) 삭제
-   * - 성공하면 프론트 상태에서도 즉시 제거(UX)
-   */
-  const onDelete = async (soundId: number) => {
-    // ✅ (추가-재원) 삭제 확인: 취소하면 API 호출/상태 변경을 하지 않음
-    const ok = window.confirm(CONFIRM_DELETE_RECENT);
-    if (!ok) return;
+  // ✅ 삭제 버튼 눌렀을 때: confirm 대신 모달 오픈
+  const openDeleteConfirm = (soundId: number, title?: string) => {
+    if (uiLocked) return;
+    setErrMsg(null);
+    setPendingDelete({ soundId, title });
+    setShowConfirm(true);
+  };
+
+  // ✅ 모달 닫기
+  const closeDeleteConfirm = () => {
+    if (removingId !== null) return; // 삭제 중이면 닫기 막기
+    setShowConfirm(false);
+    setPendingDelete(null);
+  };
+
+  // ✅ 모달에서 "삭제" 확정 시 실제 삭제 수행
+  const confirmDelete = async () => {
+    const target = pendingDelete;
+    if (!target) return;
+
+    if (removingId !== null) return;
+    setRemovingId(target.soundId);
+    setErrMsg(null);
 
     try {
-      await deleteRecentPlay(soundId);
+      await deleteRecentPlay(target.soundId);
 
-      // ✅ 화면에서 즉시 제거
       setAll((prev) => {
-        const next = prev.filter((x) => x.soundId !== soundId);
-
-        // ✅ 삭제 후 현재 page가 범위를 넘지 않도록 조정(무한스크롤 UX 안정화)
+        const next = prev.filter((x) => x.soundId !== target.soundId);
         const maxPage = Math.max(1, Math.ceil(next.length / PAGE_SIZE));
         setPage((p) => Math.min(p, maxPage));
         return next;
       });
+
+      // ✅ 성공 시 모달 닫기
+      setShowConfirm(false);
+      setPendingDelete(null);
     } catch (e) {
       console.error("최근 재생 삭제 실패", e);
+      setErrMsg("삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      // 실패 시 모달은 유지(사용자가 다시 시도/취소 선택 가능)
+    } finally {
+      setRemovingId(null);
     }
   };
 
+  const deletingThis =
+    pendingDelete?.soundId != null && removingId === pendingDelete.soundId;
+
   return (
     <>
-      <div className="page-screen recentplays-page page-has-bottom-nav">
-        <header className="mypage-subheader">
-          <button
-            type="button"
-            className="mypage-subheader__back"
-            onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/mypage"))}
-            aria-label="뒤로가기"
+      {/* ✅ 이 파일에서만 스크롤바 숨김 + 썸네일 고정 */}
+      <style>{`
+        .rp-no-scrollbar {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .rp-no-scrollbar::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
+        }
+        .rp-thumb {
+          width: 64px;
+          height: 64px;
+          object-fit: cover;
+          display: block;
+          border-radius: 14px;
+        }
+      `}</style>
+
+      <div
+        className="page-screen mx-auto d-flex flex-column text-white"
+        style={{
+          maxWidth: APP_MAX_WIDTH,
+          height: "100dvh",
+          backgroundColor: "#444",
+          overflow: "hidden",
+        }}
+      >
+        <div className="flex-shrink-0">
+          <StatusBar />
+        </div>
+
+        <div className="flex-grow-1 d-flex flex-column px-3 pt-2" style={{ minHeight: 0 }}>
+          {/* 헤더 */}
+          <header className="d-flex align-items-center justify-content-between p-3 rounded-4 border border-light border-opacity-25 shadow-sm mb-3">
+            <button
+              type="button"
+              className="btn btn-outline-light btn-sm rounded-3"
+              aria-label="뒤로가기"
+              onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/mypage"))}
+              style={{ width: 40, height: 40 }}
+              disabled={loading}
+            >
+              ←
+            </button>
+
+            <h3 className="m-0 fw-bold fs-5">최근 재생</h3>
+            <div style={{ width: 40, height: 40 }} />
+          </header>
+
+          {/* 본문(내부 스크롤) */}
+          <main
+            ref={scrollRef}
+            className="flex-grow-1 overflow-auto rp-no-scrollbar"
+            style={{
+              paddingBottom: BOTTOM_SPACER,
+              WebkitOverflowScrolling: "touch",
+              minHeight: 0,
+            }}
           >
-            &lt;
-          </button>
-          <h2 className="mypage-subheader__title">최근 재생</h2>
-          <div className="mypage-subheader__spacer" />
-        </header>
-
-        {visible.length === 0 ? (
-          <div style={{ padding: 16 }}>최근 재생한 콘텐츠가 없습니다.</div>
-        ) : (
-          <div className="sound-list">
-            {visible.map((it) => (
-              <div
-                key={it.soundId}
-                className="sound-card"
-                onClick={() => onClickCard(it.soundId)}
-                role="button"
-              >
-                <img src={it.thumbnailUrl} alt={it.title} />
-                <div className="sound-card__meta">
-                  <div className="sound-card__title">{it.title}</div>
-                  <div className="sound-card__uploader">{it.uploader}</div>
-                </div>
-
-                <button
-                  type="button"
-                  className="sound-card__delete"
-                  aria-label="최근 재생 삭제"
-                  onClick={(e) => {
-                    e.stopPropagation(); // ✅ 카드 클릭(재생) 이벤트 막기
-                    onDelete(it.soundId);
-                  }}
-                >
-                  ×
-                </button>
+            {loading ? (
+              <div className="p-3 rounded-4 border border-light border-opacity-25 shadow-sm">
+                불러오는 중...
               </div>
-            ))}
-          </div>
-        )}
+            ) : (
+              <>
+                {errMsg && (
+                  <div className="alert alert-dark text-white border border-light border-opacity-25 rounded-4">
+                    {errMsg}
+                  </div>
+                )}
 
-        <div ref={sentinelRef} style={{ height: 1 }} />
+                {visible.length === 0 ? (
+                  <div className="p-3 rounded-4 border border-light border-opacity-25 shadow-sm">
+                    최근 재생한 콘텐츠가 없습니다.
+                  </div>
+                ) : (
+                  <div className="d-flex flex-column gap-2">
+                    {visible.map((it) => (
+                      <div
+                        key={it.soundId}
+                        className="p-2 rounded-4 border border-light border-opacity-25 shadow-sm d-flex align-items-center gap-3"
+                        role="button"
+                        onClick={() => onClickCard(it.soundId)}
+                      >
+                        <img
+                          className="rp-thumb"
+                          src={it.thumbnailUrl}
+                          alt={it.title}
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = "/default-thumb.png";
+                          }}
+                        />
+
+                        <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                          <div className="fw-bold text-truncate">{it.title}</div>
+                          <div className="small text-white-50 text-truncate">
+                            {it.uploader ?? ""}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="btn btn-outline-light btn-sm rounded-3"
+                          aria-label="최근 재생 삭제"
+                          disabled={uiLocked}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDeleteConfirm(it.soundId, it.title);
+                          }}
+                          style={{ width: 44, height: 36 }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 무한 스크롤 센티넬 */}
+                <div ref={sentinelRef} style={{ height: 1 }} />
+              </>
+            )}
+          </main>
+        </div>
       </div>
 
-      <div className="bottom-nav-fixed">
+      {/* ✅ 하단바 고정(폭 제한) */}
+      <div
+        className="position-fixed start-50 translate-middle-x"
+        style={{
+          width: `min(calc(100vw - ${NAV_SIDE_GAP * 2}px), ${NAV_MAX_WIDTH}px)`,
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+          zIndex: 1030,
+        }}
+      >
         <BottomNav />
       </div>
+
+      {/* ✅ 삭제 확인 모달 */}
+      {showConfirm && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{
+            background: "rgba(0,0,0,.55)",
+            zIndex: 2500, // BottomNav(1030)보다 높게
+            padding: 16,
+          }}
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            // 배경 클릭으로 닫기(삭제 중이면 닫지 않음)
+            if (e.target === e.currentTarget) closeDeleteConfirm();
+          }}
+        >
+          <div className="w-100" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+            <div className="bg-dark text-white border border-light border-opacity-25 rounded-4 shadow-sm p-3">
+              <div className="d-flex align-items-start justify-content-between mb-2">
+                <div className="fw-bold fs-5">최근 재생 삭제</div>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  aria-label="Close"
+                  onClick={closeDeleteConfirm}
+                  disabled={removingId !== null}
+                />
+              </div>
+
+              <div className="text-white-50 mb-3" style={{ whiteSpace: "pre-line" }}>
+                최근 재생 목록에서 삭제하시겠습니까?
+                {"\n"}
+                (콘텐츠는 삭제되지 않고, 내 최근 재생 기록만 제거됩니다.)
+                {pendingDelete?.title ? `\n\n대상: ${pendingDelete.title}` : ""}
+              </div>
+
+              <div className="d-flex gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-light w-100 rounded-4"
+                  onClick={closeDeleteConfirm}
+                  disabled={removingId !== null}
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-light w-100 rounded-4 fw-bold"
+                  onClick={confirmDelete}
+                  disabled={removingId !== null}
+                  autoFocus
+                >
+                  {deletingThis ? "삭제중..." : "삭제"}
+                </button>
+              </div>
+
+              <div className="small text-white-50 mt-2">
+                삭제는 되돌릴 수 없습니다(최근 재생 기록 기준).
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

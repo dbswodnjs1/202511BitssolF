@@ -16,25 +16,43 @@ export default function MyUploadsSection(): React.ReactElement {
       .catch(() => setItems([]));
   }, []);
 
+  const goUploads = () => navigate("/mypage/uploads");
+
   if (items.length === 0) {
-    return (
-      <div className="mypage-wire__uploadBox">
-        <div className="mypage-wire__uploadIcon">≡</div>
-        <div className="mypage-wire__uploadText">아직 업로드한 콘텐츠가 없습니다.</div>
-      </div>
-    );
+    return <div className="fw-semibold">아직 업로드한 콘텐츠가 없습니다.</div>;
   }
 
   return (
-    <div className="mypage-wire__grid2">
+    <div className="row row-cols-2 g-2">
       {items.map((it) => (
-        <div
-          key={it.soundId}
-          className="mypage-wire__box"
-          onClick={() => navigate("/mypage/uploads")}
-        >
-          <img src={it.thumbnailUrl} alt={it.title} />
-          <div>{it.title}</div>
+        <div className="col" key={it.soundId}>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={goUploads}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") goUploads();
+            }}
+            className="position-relative rounded-4 overflow-hidden border border-light border-opacity-25 shadow-sm"
+            style={{ height: 140, cursor: "pointer" }}
+          >
+            <img
+              src={it.thumbnailUrl}
+              alt={it.title}
+              className="w-100 h-100"
+              style={{ objectFit: "cover", objectPosition: "center top", display: "block" }}
+            />
+
+            {/* ✅ 텍스트 오버레이 */}
+            <div
+              className="position-absolute start-0 end-0 bottom-0 p-2"
+              style={{ background: "rgba(0,0,0,0.35)" }}
+            >
+              <div className="fw-bold text-truncate" style={{ fontSize: 12 }}>
+                {it.title}
+              </div>
+            </div>
+          </div>
         </div>
       ))}
     </div>
