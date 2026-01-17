@@ -1,50 +1,82 @@
 /* src/pages/option/MyPage.wire.css */
 
+/* ✅ 폰 프레임 최대 폭 */
+:root {
+  --app-max-width: 420px;
+
+  /* ================================
+     🎨 색/바탕 토큰 (지금 바탕 유지)
+     - 색은 여기만 바꾸면 전체 반영
+     ================================ */
+  --wire-bg: #444;          /* ✅ 바탕 유지 */
+  --wire-fg: #fff;          /* ✅ 글자색 유지 */
+  --wire-accent: #00ff88;   /* 기존 초록 라인 */
+  --wire-warn: #ffd000;     /* 기존 노랑 라인 */
+
+  --wire-surface: rgba(0, 0, 0, 0.15);
+  --wire-card: rgba(255, 255, 255, 0.08);
+  --wire-overlay: rgba(0, 0, 0, 0.45);
+
+  /* 부트스트랩 톤(라운드/그림자/포커스 링) */
+  --ui-radius: 12px;
+  --ui-radius-sm: 10px;
+  --ui-shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.18);
+  --ui-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.24);
+
+  --ui-focus-ring-width: 4px;
+  --ui-focus-ring-color: rgba(255, 255, 255, 0.18);
+}
+
 /* ================================
-   1) mypage-wire 내부에서만 쓰는 변수(다른 페이지 영향 방지)
+   1) mypage-wire 내부 변수
    ================================ */
 .mypage-wire {
-  --bottom-nav-height: 60px;   /* .bottom-nav 높이 */
-  --bottom-nav-offset: 24px;   /* .bottom-nav-container bottom */
+  --bottom-nav-height: 60px;
+  --bottom-nav-offset: 24px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
-  /* ✅ 와이어 압축 값 */
   --page-pad-x: 14px;
   --page-pad-top: 10px;
   --page-pad-bottom: 10px;
 
-  --section-gap: 10px;
-  --section-pad: 8px;
-  --head-gap: 8px;
+  --section-gap: 12px;
+  --section-pad: 10px;
+  --head-gap: 10px;
 
   --card-h: 86px;
   --upload-h: 86px;
 
-  background: #444 !important;
-  color: #fff !important;
+  background: var(--wire-bg) !important; /* ✅ 바탕 유지 */
+  color: var(--wire-fg) !important;
 
-  /* ✅ 빨간선(하단바 윗면) 위까지만 높이 확보 */
-  height: calc(100vh - (var(--bottom-nav-height) + var(--bottom-nav-offset) + var(--safe-bottom))) !important;
+  /* ✅ 하단바 영역만큼 높이 빼기 */
+  height: calc(
+    100vh - (var(--bottom-nav-height) + var(--bottom-nav-offset) + var(--safe-bottom))
+  ) !important;
 
-  /* ✅ 스크롤 제거(요청사항) */
   overflow: hidden !important;
 
-  /* ✅ StatusBar/본문을 위아래로 쌓기 */
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
 }
 
+/* ✅ 모바일 주소창 이슈 완화 */
+@supports (height: 100dvh) {
+  .mypage-wire {
+    height: calc(
+      100dvh - (var(--bottom-nav-height) + var(--bottom-nav-offset) + var(--safe-bottom))
+    ) !important;
+  }
+}
+
 /* ================================
-   2) StatusBar 영역: 좌우 끝 정렬 유지
-   - 여기에는 padding을 주지 않음(끝까지 붙게)
+   2) StatusBar
    ================================ */
 .mypage-wire__status {
   flex: 0 0 auto;
 }
 
-/* ✅ StatusBar가 내부적으로 margin/padding 있으면 여기서 강제 보정 가능
-   (StatusBar 컴포넌트 CSS에 따라 필요 없을 수도 있음) */
 .mypage-wire .status-bar {
   margin: 0 !important;
   padding-left: 0 !important;
@@ -52,153 +84,274 @@
 }
 
 /* ================================
-   3) 본문 영역: 여기만 패딩 적용
+   3) 본문
    ================================ */
 .mypage-wire__inner {
   flex: 1 1 auto;
-  min-height: 0; /* flex overflow 계산 안정화 */
+  min-height: 0;
+
   padding: var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom) !important;
   box-sizing: border-box !important;
 
   display: flex;
   flex-direction: column;
+  gap: 10px;
 }
 
 /* ================================
-   4) 큰 네모(상단/섹션) 테두리
-   - ✅ 로그인 사용자 박스(.mypage-wire__me) 제거됨
-   ================================ */
-.mypage-wire__top,
-.mypage-wire__section {
-  border: 3px solid #00ff88 !important;
-  border-radius: 12px !important;
-  background: rgba(0, 0, 0, 0.15) !important;
-}
-
-/* ================================
-   5) 상단 타이틀 + 톱니
+   4) 상단 타이틀 + 톱니
+   - 바탕은 유지하되 "card header" 느낌만 추가
    ================================ */
 .mypage-wire__top {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 8px 10px !important;
 
-  /* ✅ 공간 아끼려고 margin-top 제거 */
+  padding: 10px 12px !important;
   margin-top: 0 !important;
+
+  border: 3px solid var(--wire-accent) !important; /* 기존 초록 유지 */
+  border-radius: var(--ui-radius) !important;
+  background: var(--wire-surface) !important;
+  box-shadow: var(--ui-shadow-sm) !important;
+
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  backdrop-filter: blur(6px);
 }
 
 .mypage-wire__title {
   margin: 0 !important;
   font-size: 15px !important;
-  font-weight: 700 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em;
 }
 
 .mypage-wire__gear {
-  width: 32px !important;
-  height: 32px !important;
-  border: 2px solid #00ff88 !important;
-  border-radius: 10px !important;
+  width: 38px !important;
+  height: 38px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border: 2px solid var(--wire-accent) !important;
+  border-radius: var(--ui-radius-sm) !important;
+
   background: transparent !important;
-  color: #fff !important;
+  color: var(--wire-fg) !important;
+
   cursor: pointer !important;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.mypage-wire__gear:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.mypage-wire__gear:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 var(--ui-focus-ring-width) var(--ui-focus-ring-color);
 }
 
 /* ================================
-   6) 섹션 컨텐츠 영역(세로 스택)
+   5) 섹션 컨텐츠 래퍼 (✅ 여기서 스크롤)
    ================================ */
 .mypage-wire__content {
+  flex: 1 1 auto;
+  min-height: 0;
+
   margin-top: 10px !important;
   display: flex !important;
   flex-direction: column !important;
   gap: var(--section-gap) !important;
+
+  overflow: auto; /* ✅ 잘림 방지 */
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
 }
 
-/* 섹션 내부 */
+/* ================================
+   6) 섹션 박스 공통
+   ================================ */
 .mypage-wire__section {
   padding: var(--section-pad) !important;
+
+  border: 3px solid var(--wire-accent) !important; /* 기존 초록 유지 */
+  border-radius: var(--ui-radius) !important;
+  background: var(--wire-surface) !important;
+
+  box-shadow: var(--ui-shadow-sm) !important;
 }
 
-/* 섹션 헤더 */
+/* ================================
+   7) 섹션 헤더/컨텐츠
+   ================================ */
 .mypage-wire__sectionHead {
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  padding-bottom: 6px !important;
-  border-bottom: 2px dashed rgba(0, 255, 136, 0.7) !important;
+
+  padding-bottom: 8px !important;
   margin-bottom: var(--head-gap) !important;
+
+  border-bottom: 2px dashed rgba(255, 255, 255, 0.22) !important;
 }
 
 .mypage-wire__sectionTitle {
   font-size: 12px !important;
-  font-weight: 700 !important;
+  font-weight: 800 !important;
 }
 
-/* 전체보기 버튼 */
 .mypage-wire__moreBtn {
-  border: 2px dashed rgba(0, 255, 136, 0.7) !important;
+  border: 2px solid rgba(255, 255, 255, 0.28) !important;
   background: transparent !important;
-  color: #fff !important;
+  color: var(--wire-fg) !important;
+
   font-size: 11px !important;
-  padding: 3px 8px !important;
-  border-radius: 8px !important;
+  font-weight: 700 !important;
+  padding: 5px 10px !important;
+
+  border-radius: 999px !important;
   cursor: pointer !important;
-  opacity: 0.95 !important;
+
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.mypage-wire__moreBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.mypage-wire__moreBtn:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 var(--ui-focus-ring-width) var(--ui-focus-ring-color);
 }
 
 /* ================================
-   7) 카드 2열
+   8) 카드 2열 + 이미지 클리핑
    ================================ */
 .mypage-wire__grid2 {
   display: grid !important;
   grid-template-columns: repeat(2, 1fr) !important;
-  gap: 8px !important;
+  gap: 10px !important;
 }
 
 .mypage-wire__box {
   height: var(--card-h) !important;
-  border: 3px solid #ffd000 !important;
-  border-radius: 12px !important;
-  display: grid !important;
-  place-items: center !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+
+  border: 3px solid var(--wire-warn) !important; /* 기존 노랑 유지 */
+  border-radius: var(--ui-radius) !important;
+  background: var(--wire-card) !important;
+
+  position: relative !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  display: block !important;
+
+  box-shadow: var(--ui-shadow-sm) !important;
+  transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
-/* ================================
-   8) 업로드 박스
-   ================================ */
-.mypage-wire__uploadBox {
-  height: var(--upload-h) !important;
-  border: 3px solid #ffd000 !important;
-  border-radius: 12px !important;
-  display: grid !important;
-  place-items: center !important;
-  gap: 6px !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+.mypage-wire__box:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--ui-shadow);
 }
 
-.mypage-wire__uploadIcon {
-  font-size: 16px !important;
+.mypage-wire__box img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
 }
 
-.mypage-wire__uploadText {
+/* 카드 텍스트 오버레이 */
+.mypage-wire__box > div {
+  position: absolute !important;
+  left: 8px !important;
+  right: 8px !important;
+
+  padding: 6px 8px !important;
+  border-radius: var(--ui-radius-sm) !important;
+
+  background: var(--wire-overlay) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  backdrop-filter: blur(4px);
+}
+
+.mypage-wire__box > div:nth-of-type(1) {
+  bottom: 28px !important;
   font-size: 11px !important;
-  opacity: 0.9 !important;
+  font-weight: 800;
+}
+
+.mypage-wire__box > div:nth-of-type(2) {
+  bottom: 8px !important;
+  font-size: 10px !important;
+  opacity: 0.92 !important;
 }
 
 /* ================================
-   9) 화면 높이가 더 작을 때 추가 압축
+   9) 하단바: 폰 프레임 폭 안으로 고정
+   ================================ */
+.bottom-nav-fixed {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: min(100vw, var(--app-max-width));
+  bottom: calc(0px + env(safe-area-inset-bottom, 0px));
+  z-index: 1000;
+
+  padding: 0 12px 12px;
+  box-sizing: border-box;
+
+  pointer-events: none;
+}
+
+.bottom-nav-fixed > * {
+  pointer-events: auto;
+}
+
+/* BottomNav 내부 루트 클래스명이 다르면 여기 수정 */
+.bottom-nav-fixed .bottom-nav {
+  width: 100%;
+  border-radius: 999px;
+  box-shadow: var(--ui-shadow);
+}
+
+/* ================================
+   10) 작은 화면 최적화
    ================================ */
 @media (max-height: 760px) {
   .mypage-wire {
     --card-h: 74px;
     --upload-h: 74px;
-    --section-gap: 8px;
-    --head-gap: 6px;
-    --section-pad: 7px;
+    --section-gap: 10px;
+    --head-gap: 8px;
+    --section-pad: 9px;
   }
 
   .mypage-wire__content {
     margin-top: 8px !important;
   }
+}
+
+/* 모션 민감 사용자 */
+@media (prefers-reduced-motion: reduce) {
+  .mypage-wire__gear,
+  .mypage-wire__moreBtn,
+  .mypage-wire__box {
+    transition: none !important;
+  }
+}
+
+/* 즐겨찾기/최근재생/업로드 섹션에서 "없음" 문구용 */
+.mypage-wire__empty {
+  padding: 12px 2px;
+  opacity: 0.9;
 }

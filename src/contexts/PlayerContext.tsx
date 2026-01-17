@@ -1,9 +1,9 @@
 import { createContext } from 'react';
 
 export interface Sound {
-  id: number;
+  soundId: number;
   title: string;
-  uploaderName: string;
+  uploader: string;
   fileUrl: string;
   thumbnailUrl: string;
 }

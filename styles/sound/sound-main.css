@@ -1,23 +1,31 @@
 /* Sound List - 카드 슬라이드 */
 .sound-list {
     display: flex;
+    flex-direction: row;
+    gap: 16px;
     overflow-x: auto;
-    gap: 12px;
-    padding: 8px 0;
+    /* 가로 스크롤 활성화 */
+    overflow-y: hidden;
     scroll-snap-type: x mandatory;
+    /* 스냅 스크롤 (선택) */
     -webkit-overflow-scrolling: touch;
+    /* 모바일 부드러운 스크롤 */
+    padding-bottom: 10px;
+    /* 스크롤바 공간 */
+    scroll-behavior: smooth;
 }
 
-.sound-list::-webkit-scrollbar {
+/* .sound-list::-webkit-scrollbar {
     display: none;
-    /* 스크롤바 숨기기 (선택) */
-}
+} */
 
 .sound-card {
-    flex-shrink: 0;
-    width: 160px;
+    flex: 0 0 auto;
+    /* 카드가 줄어들지 않게 */
+    width: 150px;
+    /* 카드 너비 고정 */
     scroll-snap-align: start;
-    cursor: pointer;
+    /* 스냅 위치 (선택) */
 }
 
 .sound-card img {
@@ -31,4 +39,16 @@
     margin-top: 8px;
     font-size: 14px;
     color: #fff;
+}
+
+.sound-card {
+    position: relative;
+}
+
+.favorite-star {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    color: gold;
+    font-size: 20px;
 }

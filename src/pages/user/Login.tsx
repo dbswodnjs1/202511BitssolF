@@ -1,54 +1,61 @@
 // src/pages/user/Login.tsx
 
-import React, { useState, useEffect } from "react";
+
+import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import BottomNav from "../../components/layout/BottomNav";
-import api from "../../api";
+import { getMe, login } from "../../api/user";
 
 function Login(): React.ReactElement {
   const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 컴포넌트 마운트 시 토큰 확인
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      // 서버에 토큰 유효한지 확인
-      api.get('/v1/users/me')
-        .then(() => setIsLoggedIn(true))
-        .catch(() => {
-          localStorage.removeItem('token');  // 만료됨, 삭제
-          setIsLoggedIn(false);
-        }).finally(() => setIsLoading(false));
-    } else {
+    const token = localStorage.getItem("token");
+    if (!token) {
       setIsLoading(false);
+      return;
     }
+
+    getMe()
+      .then(() => setIsLoggedIn(true))
+      .catch(() => {
+        localStorage.removeItem("token");
+        setIsLoggedIn(false);
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    api.post('/v1/users/login', { name, password })
-      .then((response) => {
-        console.log("로그인 성공:", response.data);
-        localStorage.setItem('token', response.data); // 'Bearer ' 제거하고 순수 토큰만 저장
-        setIsLoggedIn(true);
-        navigate("/");
-      })
-      .catch((error) => {
-        console.error("로그인 실패:", error);
-        alert("로그인 실패: 아이디 또는 비밀번호를 확인하세요.");
-      });
+    try {
+      const jwt = await login(name, password);
+      localStorage.setItem("token", jwt); // ✅ 순수 JWT 저장
+      setIsLoggedIn(true);
+      navigate("/");
+    } catch {
+      alert("로그인 실패: 아이디 또는 비밀번호를 확인하세요.");
+    }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
     setIsLoggedIn(false);
   };
 
-  // 로그인된 상태면 다른 화면 표시
+  if (isLoading) {
+    return (
+      <div className="auth-container">
+        <p>로딩중...</p>
+        <BottomNav />
+      </div>
+    );
+  }
+
   if (isLoggedIn) {
     return (
       <div className="auth-container">
@@ -64,7 +71,6 @@ function Login(): React.ReactElement {
     );
   }
 
-  // 로그인 안 된 상태면 로그인 폼 표시
   return (
     <div className="auth-container">
       <h1>로그인</h1>
@@ -81,6 +87,7 @@ function Login(): React.ReactElement {
             required
           />
         </div>
+
         <div className="form-group">
           <label htmlFor="password">비밀번호</label>
           <input
@@ -93,14 +100,17 @@ function Login(): React.ReactElement {
             required
           />
         </div>
+
         <button type="submit" className="btn btn-primary">
           로그인
         </button>
       </form>
+
       <div className="auth-link">
         <p>계정이 없으신가요?</p>
         <NavLink to="/signup">회원가입</NavLink>
       </div>
+
       <BottomNav />
     </div>
   );

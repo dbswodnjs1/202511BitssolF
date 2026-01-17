@@ -7,6 +7,7 @@ import LikeButton from '../../components/board/LikeButton'
 import VoteSection from '../../components/board/VoteSection'
 import CommentList from '../../components/board/CommentList'
 import BottomNav from '../../components/layout/BottomNav'
+import { formatTimeAgo } from '../../utils/time'
 import type { Board } from '../../types/board'
 import './Board.css'
 
@@ -57,16 +58,16 @@ function BoardDetail() {
         }
     }
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString)
-        return date.toLocaleString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-        })
-    }
+    // const formatDate = (dateString: string) => {
+    //     const date = new Date(dateString)
+    //     return date.toLocaleString('ko-KR', {
+    //         year: 'numeric',
+    //         month: '2-digit',
+    //         day: '2-digit',
+    //         hour: '2-digit',
+    //         minute: '2-digit',
+    //     })
+    // }
 
     if (isLoading) {
         return (
@@ -79,22 +80,24 @@ function BoardDetail() {
     if (!board) return null
 
     return (
+
+
         <div className="home-screen">
             <div className="board-header">
                 <button className="board-header__back-btn" onClick={() => navigate('/board')}>
                     ← 목록
                 </button>
                 <div className="board-header__actions">
-                <button
-                className="board-header__btn"
-                onClick={() =>
-                    board.category === 'vote'
-                    ? navigate(`/board/${board.boardId}/vote/edit`)
-                    : navigate(`/board/${board.boardId}/edit`)
-                }
-                >
-                수정
-                </button>
+                    <button
+                        className="board-header__btn"
+                        onClick={() =>
+                            board.category === 'vote'
+                                ? navigate(`/board/${board.boardId}/vote/edit`)
+                                : navigate(`/board/${board.boardId}/edit`)
+                        }
+                    >
+                        수정
+                    </button>
                     <button className="board-header__btn" onClick={handleDelete}>
                         삭제
                     </button>
@@ -103,26 +106,40 @@ function BoardDetail() {
 
             <main className="home-screen__content">
                 <div className="bottom-panel">
-                    <div className="bottom-panel__bg" />
                     <div className="bottom-panel__content">
                         <div className="board-detail">
                             <div className="board-detail__header">
+                                {/* 카테고리 */}
                                 <span className="board-detail__category">
                                     {CATEGORY_LABEL_MAP[board.category as CategoryType] ?? board.category}
                                 </span>
 
-                                <h1 className="board-detail__title">{board.title}</h1>
+                                {/* 🔹 작성자 닉네임 (프로필 이미지 없이) */}
+                                <div className="board-detail__author">
+                                    <span className="board-detail__writer">
+                                        {board.writer}
+                                    </span>
+                                </div>
+
+                                {/* 제목 */}
+                                <h1 className="board-detail__title">
+                                    {board.title}
+                                </h1>
+                                <span className="board-detail__date board-detail__date--absolute">
+                                    {formatTimeAgo(board.createdAt)}
+                                </span>
+
+
+                                {/* 날짜 / 조회수
                                 <div className="board-detail__meta">
-                                    <span className="board-detail__writer">{board.writer}</span>
                                     <span className="board-detail__date">
                                         {formatDate(board.createdAt)}
                                     </span>
                                     <span className="board-detail__views">
                                         조회 {board.viewCount}
                                     </span>
-                                </div>
+                                </div> */}
                             </div>
-
                             {board.imageUrl && (
                                 <div className="board-detail__image">
                                     <img src={board.imageUrl} alt={board.title} />
@@ -140,6 +157,10 @@ function BoardDetail() {
                                     initialLikeCount={board.likeCount}
                                     initialLikedByUser={board.likedByUser}
                                 />
+
+                                <div className="board-detail__comment-count">
+                                    💬 {board.commentCount}
+                                </div>
                             </div>
 
                             {board.voteOptions && board.voteOptions.length > 0 && (
@@ -172,7 +193,9 @@ function BoardDetail() {
                             <CommentList boardId={board.boardId} />
                         </div>
                     </div>
-                    <BottomNav />
+                    <div className="bottom-nav-fixed">
+                        <BottomNav />
+                    </div>
                 </div>
             </main>
         </div>

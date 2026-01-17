@@ -24,6 +24,13 @@ import MyPage from "../pages/option/MyPage";
 import Settings from "../pages/option/Settings";
 import ChangePassword from "../pages/option/ChangePassword";
 import ProfileImageSettings from "../pages/option/ProfileImageSettings";
+import RecentPlaysPage from "../components/mypage/RecentPlaysPage";
+import MyUploadsPage from "../components/mypage/MyUploadsPage";
+import FavoritesPage from "../components/mypage/FavoritesPage";
+import NicknameSettings from "../pages/option/NicknameSettings";
+import EmailSettings from "../pages/option/EmailSettings";
+import PhoneSettings from "../pages/option/PhoneSettings";
+import ProfileSettings from "../pages/option/ProfileSettings";
 
 // 페이지 routing 정보를 배열에 미리 저장해둔다.
 const routes = [
@@ -37,6 +44,13 @@ const routes = [
     { path: "/option/settings", element: <Settings /> },
     { path: "/option/password", element: <ChangePassword /> },
     { path: "/option/profile-image", element: <ProfileImageSettings /> },
+    { path: "/mypage/recent", element: <RecentPlaysPage /> },
+    { path: "/mypage/uploads", element: <MyUploadsPage /> },
+    { path: "/mypage/favorites", element: <FavoritesPage /> },
+    { path: "/option/nickname", element: <NicknameSettings /> },
+    { path: "/option/email", element: <EmailSettings /> },
+    { path: "/option/phone", element: <PhoneSettings /> },
+    { path: "/option/profile", element: <ProfileSettings /> },
 
     // 보호된 페이지 (로그인 필요)
     // spring boot 서버에 넣어서 실행하면 최초 로딩될때  /index.html 경로로 로딩된다.
@@ -46,12 +60,12 @@ const routes = [
     { path: "/sound", element: <SoundMain /> },
     { path: "/sound/new", element: <SoundForm /> },
     { path: "/soundplayer", element: <SoundPlayer /> },
-    { path: "/board", element: <ProtectedRoute><BoardList /></ProtectedRoute> },
-    { path: "/board/:id", element: <ProtectedRoute><BoardDetail /></ProtectedRoute> },
-    { path: "/board/new", element: <ProtectedRoute><BoardForm /></ProtectedRoute> },
-    { path: "/board/:id/edit", element: <ProtectedRoute><BoardForm /></ProtectedRoute> },
-    { path: "/board/vote", element: <ProtectedRoute><BoardVoteForm /></ProtectedRoute> },
-    { path: "/board/:id/vote/edit", element: <ProtectedRoute><BoardVoteForm /></ProtectedRoute> },
+    { path: "/board", element: <BoardList /> },
+    { path: "/board/:id", element: <BoardDetail /> },
+    { path: "/board/new", element: <BoardForm /> },
+    { path: "/board/:id/edit", element: <BoardForm /> },
+    { path: "/board/vote", element: <BoardVoteForm /> },
+    { path: "/board/:id/vote/edit", element: <BoardVoteForm /> },
 ];
 
 

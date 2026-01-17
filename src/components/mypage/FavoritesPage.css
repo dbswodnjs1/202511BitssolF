@@ -1,0 +1,115 @@
+/* src/pages/mypage/FavoritesPage.css */
+
+.favorites-page {
+  background: #444;
+  color: #fff;
+  min-height: 100vh;
+}
+
+/* 하단바에 가리지 않게 */
+.favorites-page.page-has-bottom-nav {
+  padding-bottom: calc(60px + 16px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 폰 프레임 폭 안에서만 하단바 고정 */
+.bottom-nav-fixed {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100vw, 420px); /* ✅ 폰 프레임 폭(필요시 390/360으로 맞춰) */
+  bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+/* 헤더 */
+.favorites-page .mypage-subheader {
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 2px dashed rgba(0, 255, 136, 0.7);
+}
+.favorites-page .mypage-subheader__back {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 2px solid #00ff88;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+.favorites-page .mypage-subheader__title {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+.favorites-page .mypage-subheader__spacer {
+  width: 34px;
+  height: 34px;
+}
+
+/* 리스트 */
+.favorites-page .sound-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+/* 카드(가로 길게) */
+.favorites-page .sound-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  border: 3px solid #ffd000;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 10px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.favorites-page .sound-card img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex: 0 0 auto;
+}
+
+.favorites-page .sound-card__meta {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.favorites-page .sound-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.favorites-page .sound-card__uploader {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* X 버튼 */
+.favorites-page .sound-card__delete {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  flex: 0 0 auto;
+}

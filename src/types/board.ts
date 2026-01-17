@@ -16,6 +16,7 @@ export interface Board {
   updatedAt: string
   prevId?: number
   nextId?: number
+  commentCount: number
 }
 
 export interface BoardListResponse {

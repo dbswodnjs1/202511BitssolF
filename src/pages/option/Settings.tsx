@@ -49,10 +49,11 @@ export default function Settings(): React.ReactElement {
             <button
               className="settings-wire__row"
               type="button"
-              onClick={() => navigate("/option/profile-image")}
+              onClick={() => navigate("/option/profile")}
             >
               프로필 설정
             </button>
+
             {/*  비밀번호 변경 이동 */}
             <button
               className="settings-wire__row"

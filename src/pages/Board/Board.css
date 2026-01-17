@@ -2,21 +2,30 @@
  * 게시판 스타일 (Board.css)
  * ============================= */
 
- /* 투표 퍼센트 */
+/* 댓글 갯수 */
+.board-detail__comment-count {
+    font-size: 14px;
+    color: #666;
+    display: flex;
+    align-items: center;
+}
+
+
+/* 투표 퍼센트 */
 .vote-option__text {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
 }
 
 .vote-option__percent {
-  font-weight: 600;
-  color: #2c3e50;
+    font-weight: 600;
+    color: #2c3e50;
 }
 
 .vote-option__btn.selected {
-  background-color: #1f3d5a;
-  color: white;
+    background-color: #1f3d5a;
+    color: white;
 }
 
 
@@ -38,13 +47,18 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    /* 내부 스크롤 허용 위해 부모는 hidden */
 }
 
 .bottom-panel {
     position: relative !important;
-    height: auto !important;
+    height: 100% !important;
+    /* 전체 높이 차지 */
     flex: 1;
     bottom: auto !important;
+    display: flex;
+    flex-direction: column;
 }
 
 .bottom-panel__bg {
@@ -53,8 +67,12 @@
 }
 
 .bottom-panel__content {
-    padding: 150px 16px 100px !important;
-    /* 하단 네비게이션 여백 확보 */
+    padding: 140px 16px 100px !important;
+    /* 상단 패딩 확보, 하단은 네비바 여백 */
+    flex: 1;
+    overflow-y: auto;
+    /* 리스트 부분만 스크롤 */
+    -webkit-overflow-scrolling: touch;
 }
 
 .board-header__title {
@@ -89,13 +107,13 @@
 
 /* 카테고리 필터 */
 .board-categories {
-  position: relative;
-  z-index: 10;
+    position: relative;
+    z-index: 10;
 }
 
 .bottom-panel,
 .bottom-panel__bg {
-  z-index: 0;
+    z-index: 0;
 }
 
 
@@ -103,8 +121,8 @@
     background: #f5f5f5;
     border: 1px solid #e6e8ef;
     border-radius: 16px;
-    padding: 6px 16px;
-    font-size: 13px;
+    padding: 5px 15px;
+    font-size: 12px;
     white-space: nowrap;
     cursor: pointer;
 }
@@ -186,6 +204,22 @@
     display: flex;
     gap: 12px;
 }
+
+
+.board-detail__header {
+    position: relative;
+    /* 기준점 */
+}
+
+.board-detail__date--absolute {
+    position: absolute;
+    top: 0;
+    right: 0;
+
+    font-size: 12px;
+    color: #999;
+}
+
 
 /* 게시글 상세 */
 .board-detail {
@@ -653,4 +687,29 @@
 .pagination__btn--group {
     font-size: 16px;
     font-weight: 700;
+}
+
+/* 하단 네비게이션 고정 */
+.bottom-nav-fixed {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    /* 클릭 이벤트가 하위 요소(버튼)로 전달되도록 */
+}
+
+.bottom-nav-fixed > * {
+
+    pointer-events: auto;
+
+    /* BottomNav 내부 요소는 다시 클릭 가능하게 */
+
+    width: 90%;
+
+    /* 네비게이션 바가 전체 너비를 차지하도록 설정 */
+
 }

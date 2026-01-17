@@ -166,21 +166,6 @@ function BoardForm() {
                                 />
                             </div>
 
-                            {/* 이미지 */}
-                            <div className="board-form__group">
-                                <label className="board-form__label">이미지 URL (선택)</label>
-                                <input
-                                    type="text"
-                                    className="board-form__input"
-                                    value={formData.imageUrl}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, imageUrl: e.target.value })
-                                    }
-                                    placeholder="이미지 URL을 입력하세요"
-                                    disabled={isLoading}
-                                />
-                            </div>
-
                             {/* 버튼 */}
                             <div className="board-form__actions">
                                 <button

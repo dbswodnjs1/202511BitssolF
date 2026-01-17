@@ -1,31 +1,27 @@
+// src/pages/option/ChangePassword.tsx
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../api"; // ✅ index.ts 통일 버전
 import StatusBar from "../../components/layout/StatusBar";
 import BottomNav from "../../components/layout/BottomNav";
+import { changeMyPassword } from "../../api/user";
+import { validatePassword } from "../../utils/validators";
 import "./ChangePassword.wire.css";
 
 export default function ChangePassword(): React.ReactElement {
   const navigate = useNavigate();
 
-  // ✅ 입력값 상태
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
-  // ✅ UI 상태
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /**
-   * ✅ 비밀번호 변경 요청
-   * - 성공하면: 보안상 "무조건 로그아웃"
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    // 1) 프론트 1차 검증
     if (!currentPassword || !newPassword || !confirmNewPassword) {
       setErrorMsg("현재 비밀번호와 새 비밀번호를 입력해 주세요.");
       return;
@@ -35,30 +31,25 @@ export default function ChangePassword(): React.ReactElement {
       return;
     }
 
+    const pwMsg = validatePassword(newPassword);
+    if (pwMsg) {
+      setErrorMsg(pwMsg);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // 2) ✅ 백엔드 호출
-      // baseURL이 "/api"면 실제 요청은 "/api/v1/users/me/password"
-      await api.patch("/v1/users/me/password", {
-        currentPassword,
-        newPassword,
-      });
+      await changeMyPassword(currentPassword, newPassword);
 
-      // 3) ✅ 요구사항: 변경 후 무조건 로그아웃
+      // 변경 후 로그아웃
       localStorage.removeItem("token");
-
-      // HashRouter 기준 이동 (팀에서 이 방식 쓰면 계속 유지)
       window.location.hash = "#/login";
-      // 또는: navigate("/login", { replace: true });  // 팀에서 navigate로 통일할 때
     } catch (err: any) {
-      // 4) 서버 메시지 우선 표시(있으면)
       const serverMsg =
         err?.response?.data?.message ||
         err?.response?.data ||
         "비밀번호 변경에 실패했습니다.";
-
       setErrorMsg(typeof serverMsg === "string" ? serverMsg : "비밀번호 변경에 실패했습니다.");
-      console.error(err);
     } finally {
       setIsSubmitting(false);
     }
@@ -69,7 +60,6 @@ export default function ChangePassword(): React.ReactElement {
       <div className="page-screen pw-wire">
         <StatusBar />
 
-        {/* 상단: 뒤로가기 + 타이틀 */}
         <header className="pw-wire__top">
           <button
             type="button"

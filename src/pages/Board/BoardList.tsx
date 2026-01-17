@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { getBoardList } from '../../api/boardApi'
 import Pagination from '../../components/board/Pagination'
 import BottomNav from '../../components/layout/BottomNav'
+import { formatTimeAgo } from '../../utils/time'
 import type { BoardListResponse } from '../../types/board'
 import './Board.css'
 
@@ -17,15 +18,15 @@ const CATEGORIES = [
     { value: 'recommend', label: '추천' },
     { value: 'question', label: '질문' },
 ]
-    type CategoryType = 'free' | 'daily' | 'recommend' | 'question' | 'vote'
+type CategoryType = 'free' | 'daily' | 'recommend' | 'question' | 'vote'
 
-    const CATEGORY_LABEL_MAP: Record<CategoryType, string> = {
+const CATEGORY_LABEL_MAP: Record<CategoryType, string> = {
     free: '자유게시판',
     daily: '일상',
     recommend: '추천',
     question: '질문',
     vote: '투표',
-    }
+}
 
 
 function BoardList() {
@@ -34,7 +35,7 @@ function BoardList() {
     const [currentCategory, setCurrentCategory] = useState('all')
     const [currentPage, setCurrentPage] = useState(1)
     const [isLoading, setIsLoading] = useState(false)
-    
+
     const loadBoards = async (category: string, page: number) => {
         setIsLoading(true)
         try {
@@ -61,14 +62,6 @@ function BoardList() {
         setCurrentPage(page)
     }
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString)
-        return date.toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-        })
-    }
 
     return (
         <div className="home-screen">
@@ -97,7 +90,6 @@ function BoardList() {
 
             <main className="home-screen__content">
                 <div className="bottom-panel">
-                    <div className="bottom-panel__bg" />
                     <div className="bottom-panel__content">
                         {isLoading ? (
                             <div className="board-loading">게시글을 불러오는 중...</div>
@@ -111,12 +103,12 @@ function BoardList() {
                                             onClick={() => navigate(`/board/${board.boardId}`)}
                                         >
                                             <div className="board-card__header">
-                                            <span className="board-card__category">
-                                            {CATEGORY_LABEL_MAP[board.category as CategoryType] ?? board.category}
-                                            </span>
+                                                <span className="board-card__category">
+                                                    {CATEGORY_LABEL_MAP[board.category as CategoryType] ?? board.category}
+                                                </span>
 
                                                 <span className="board-card__date">
-                                                    {formatDate(board.createdAt)}
+                                                    {formatTimeAgo(board.createdAt)}
                                                 </span>
                                             </div>
                                             <h3 className="board-card__title">{board.title}</h3>
@@ -146,7 +138,9 @@ function BoardList() {
                             <div className="board-empty">게시글이 없습니다.</div>
                         )}
                     </div>
-                    <BottomNav />
+                    <div className="bottom-nav-fixed">
+                        <BottomNav />
+                    </div>
                 </div>
             </main>
         </div>
