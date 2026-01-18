@@ -19,7 +19,7 @@ import StatusBar from "../../components/layout/StatusBar";
 import BottomNav from "../../components/layout/BottomNav";
 // import BottomNav from "../../../components/layout/BottomNav";
 
-// import "./FavoritesPage.css"; // ✅ 부트스트랩 버전에서는 제거(필요하면 남겨도 됨)
+
 
 type SoundDto = {
   soundId: number;

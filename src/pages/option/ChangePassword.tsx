@@ -7,8 +7,7 @@ import BottomNav from "../../components/layout/BottomNav";
 import { changeMyPassword } from "../../api/user";
 import { validatePassword } from "../../utils/validators";
 
-// ✅ wire CSS 제거
-// import "./ChangePassword.wire.css";
+
 
 const APP_MAX_WIDTH = 420;
 const BOTTOM_SPACER = "110px"; // ✅ 하단바 겹침 방지(대략)

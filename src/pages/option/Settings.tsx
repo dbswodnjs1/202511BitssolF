@@ -5,8 +5,6 @@ import { useNavigate } from "react-router-dom";
 import StatusBar from "../../components/layout/StatusBar";
 import BottomNav from "../../components/layout/BottomNav";
 
-// ✅ wire CSS 제거
-// import "./Settings.wire.css";
 
 const APP_MAX_WIDTH = 420;
 const BOTTOM_SPACER = "110px"; // ✅ 하단바 겹침 방지(대략)

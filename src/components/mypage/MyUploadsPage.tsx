@@ -19,7 +19,7 @@ import StatusBar from "../../components/layout/StatusBar";
 import { usePlayer } from "../../hooks/usePlayer";
 // import { usePlayer } from "../../../hooks/usePlayer";
 
-// import "./MyUploadsPage.css"; // ✅ 부트스트랩 버전에서는 제거(필요하면 남겨도 됨)
+
 
 type SoundDto = {
   soundId: number;
